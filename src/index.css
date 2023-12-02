@@ -1,0 +1,41 @@
+html {
+  background-color: #000;
+  color: #fff;
+}
+.app {
+  position: relative;
+  width: 100vw;
+}
+.header {
+  text-align: center;
+  width: 165px;
+  margin: auto;
+}
+.body {
+
+}
+.logic {
+  text-align: center;
+  width: 1000px;
+  margin: auto;
+
+}
+.cells {
+  text-align: center;
+  width: 800px;
+  height: 800px;
+  margin: auto;
+  /* background-color: red; */
+
+  line-height: 0;
+}
+.cell {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+}
+.cell img {
+  width: 20px;
+  height: 20px;
+}
