@@ -7,7 +7,7 @@ const App = () => {
   return (
     <div className="app">
       <div className="header">
-        connect ur shitty wallet
+        {!userFriendlyAddress ? "connect ur shitty wallet" : ""}
         <TonConnectButton />
       </div>
       <div className="body">
