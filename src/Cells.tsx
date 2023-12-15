@@ -202,7 +202,7 @@ const Cells = () => {
         modals: 'all',
         skipRedirectToWallet: 'ios',
         notifications: [],
-        returnStrategy: 'https://cells.sepezho.com/'
+        returnStrategy: 'https://2.toncells.org/'
       })
     } catch (e) {
       console.log(e)
@@ -245,7 +245,7 @@ const Cells = () => {
         modals: 'all',
         skipRedirectToWallet: 'ios',
         notifications: [],
-        returnStrategy: 'https://cells.sepezho.com/'
+        returnStrategy: 'https://2.toncells.org/'
       })
     } catch (e) {
       console.log(e)
@@ -255,7 +255,7 @@ const Cells = () => {
   return (
     <div className="logic">
       <br />
-      DONT BY THIS NFT IF YOU WANT TO FLIP IT / MAKE MONEY ON IT!!! FUCK OFF NFT FLIPPER!!! I HATE THEM!
+      DONT BUY THIS NFT IF YOU WANT TO FLIP IT
       <br />
       by this nfts only if you want to have fun and try this tehnology!
       <br />
@@ -269,7 +269,7 @@ const Cells = () => {
       {selectedId.state ? <p>nft address: <span className='addr' onClick={() => navigator.clipboard.writeText(Address.parse(selectedId.state.nft_address).toString())}>{Address.parse(selectedId.state.nft_address).toString().slice(0, 5)}...{Address.parse(selectedId.state.nft_address).toString().slice(-5)}</span> <i className='addr_text'>click to copy</i></p> : ''}
       {selectedId.state ? <p>name: {selectedId.state.name}</p> : ''}
       {selectedId.state ? <p>description: {selectedId.state.description}</p> : ''}
-      {selectedId.state && !userFriendlyAddress ? <p>connect ur shitty wallet to edit nfts!!!!</p> : ''}
+      {selectedId.state && !userFriendlyAddress ? <p>connect ur wallet to edit nfts!!!!</p> : ''}
       {selectedId.state && userFriendlyAddress && !Address.parseFriendly(userFriendlyAddress).address.equals(selectedId.state.editor) ? <p>u r not an editor of this nft</p> : ''}
       {selectedId.state && userFriendlyAddress && Address.parseFriendly(userFriendlyAddress).address.equals(selectedId.state.editor) ? <p><button onClick={() => { setEditing(!editing) }}>{editing ? 'cancel update X' : 'edit this nft'}</button> </p> : ''}
       {editing ? <div>
@@ -282,7 +282,7 @@ const Cells = () => {
           onChange={(e: any) => {
             const file = e.target.files[0];
             if (file) {
-              if (file.size < 100 * 1024) { // 100 * 1024 bytes = 100KB
+              if (file.size < 63 * 1024) { // 100 * 1024 bytes = 100KB
                 const reader = new FileReader();
                 reader.onload = (readEvent) => {
                   const buffer = readEvent?.target?.result;
@@ -290,7 +290,7 @@ const Cells = () => {
                 };
                 reader.readAsArrayBuffer(file);
               } else {
-                alert("File size exceeds 100KB");
+                alert("File size exceeds 63KB");
                 e.target.value = "";
               }
             }
