@@ -257,7 +257,7 @@ const Cells = () => {
       <br />
       DONT BUY THIS NFT IF YOU WANT TO FLIP IT
       <br />
-      by this nfts only if you want to have fun and try this tehnology!
+      buy this nfts only if you want to have fun and try this technology!
       <br />
       {loading ? <p>loading onchain data...</p> : ''}
       {error ? <p>Error : {error.message}</p> : ''}
