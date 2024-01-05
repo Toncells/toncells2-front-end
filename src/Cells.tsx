@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { getHttpEndpoint } from "@orbs-network/ton-access";
 import { beginCell, BitBuilder, Cell, TonClient, Dictionary, Address } from "ton";
 import { sha256_sync } from 'ton-crypto'
-import { useQuery, gql } from '@apollo/client';
+import { useLazyQuery, gql } from '@apollo/client';
 import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
+import { loadavg } from 'os';
 const nft_coll_address = "EQAY-HSJsRfXpFASJfc2QgDYAOoUgc7NjIQSE-a603qe4efO"
 const coverImg = "UklGRkYEAABXRUJQVlA4IDoEAAAQFQCdASpAAEAAPp1CmUq0My2rKhmcWLATiWkAE9B/b+ix8+P4PE19m/y/CDtWboRjnvItQLul6I/204waO71Wv6P9m/O59M/sT8A360f8fsQei02Cxol2bjbM2/x0d4+i27xcE/79VPMDoJLo0iCobsRjdsLhuiElwO/puar0C1135HBXzVcrh3vt18ffR0WTmkKHAn444fjTdvDzQQihhHLJJqRagsoEW+0O287h0AAA/vvQGycTEvTJP39yj9nu/wCTQBJF/ehnz7/mNXMU0DRwCJ3UtqvhqIzFj8B3n+CLx9xytEPmu4zrU5cQ3/5im2PX1dEwTQMrpDMPqvkPW/biBfDc+2eufkGmOCjkTJquXNPbk/MjkLxD0RieoWmbPEPjYH54fCrsdyBylr1qR2Mm0sH+azNkAmv4YzhitAplQg3PJ2ZuglT//8+y8vpxhsPwLKOtgkHkD5d/B4Y4dJvCwQyO9uIGTU7IgaV1NzeQZGme5+QD3puTL5f8PMIqV+1NGAKn9FteVF8s6iclgibOpzqCKGfUBr3DvplkCG3wmza7BoPWJrnuKLDfD+Eu3cQZ6jojHRFVH41eHx6G9EcigV/Pv7pGValQQmwJy/mGze7Cavg3hR+OP1BCvrsygNVkdaRYqJtCwhn6wn7oCUxjGzOuR65ZSiwCwcZ6fvjc7KAb/fMk9BcQNyBGwIw3vZkck70KLJeG2fg1egR+LISuUjzoHv9AwgTchYEKWJlfG0Lhv/jfz7dlwaa6BKA/6+Zs+p1pGU4IT8FkqC/zo6gENiOiYmnipvGkceyymKX1SF1jmcKXg+d0doCeN82lP1uuvYiAYXb5nXF1/PoyQ1BPbiRNlLFuZzxIozvVoeTrm+jDdOeBJBJF5tcYCtTAYHjFkAKBRnNWksErzdo63vsjcm+Zl7GRdv+MMvMD9PNLAio78JjGKxs4yOJcQ6ICCeuwB/lMy8k7jjyh+vUH6hfrLAkNxqfjw1I2Pxaxrjz3hktEDzVeGDE/ecVhE3iRqGPitYF5aC+c9+F/vGFYJlAjBV/i2IdLRJ6Ag5GQVEkzvDZyzv4WrD8nzL2PV12g/jh0KGJPgo3+gnR9tZRmLDYAhCCWWcNZ1U65QTTxcL1fFUa0bSEW6y1mxMfyG2ZdIEjPq3mD1MzOcvgdv4esM5/wwr/v53WyXeokaWnSu5zXsAdM5JRkun8/6KBp3BH/YvJdpRtJ70VoXz0O7PPL18sF5UiMzLzEso3+xE/RuNv9TfJyx0ntwO5RDRVBJwMA8AzOvDWLvcS0pHD+PApSr8uR/WJ5TNX7mFd0U6ZFis8opoPwlH0oWaZpYlX7tsja93R1Hvwlc7ArPCoHvfX8zW1RDYcPzhypSCwu7UaG0URtfCgXh71NLPPRSqarG8+nX47DOmqIQoyCr+D9t633LWb3+7nNb+gAAA=="
 const GET_STATES = gql`
@@ -11,9 +12,7 @@ const GET_STATES = gql`
    account_states(
    parsed_nft_collection_address_address: "18F87489B117D7A4501225F7364200D800EA1481CECD8C841213E6BAD37A9EE1"
   ) {
-    nft_address: address
     nft_workchain: workchain
-    account_state_state_init_data
   }
   }
 `;
@@ -101,9 +100,13 @@ const Cells = () => {
   const [descrip, setDescrip] = useState('');
   const [img, setImg] = useState(null as any);
   const [img_old, setImgOld] = useState(null as any);
-  const { loading, error, data } = useQuery(GET_STATES, { pollInterval: 20000 });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [data, setData] = useState({ ln: 0 } as any);
+
   const [tonConnectUI] = useTonConnectUI();
   const userFriendlyAddress = useTonAddress();
+  const [getNfts, dton_responce_old] = useLazyQuery(GET_STATES);
 
   useEffect(() => {
     if (!cells[0]) {
@@ -116,12 +119,64 @@ const Cells = () => {
   }, []);
 
   useEffect(() => {
-    if (cells[0] && !cells[0].state && !error && !loading && data.account_states) {
-      console.log(data.account_states)
+
+    const fn = () => {
+      let i = 0;
+      let dataToSet = [] as any;
+      (async () => {
+        setLoading(true)
+        while (i < 12) {
+          const GET_STATES_a = gql`
+  query GetAccountStates {
+   account_states(
+    order_by: "lt"
+   page_size: 150
+   page: ${i}
+   parsed_nft_collection_address_address: "18F87489B117D7A4501225F7364200D800EA1481CECD8C841213E6BAD37A9EE1"
+  ) {
+    nft_address: address
+    nft_workchain: workchain
+    account_state_state_init_data
+  }
+  }
+`;
+          const dton_responce = await getNfts({
+            query: GET_STATES_a,
+          })
+          if (!dton_responce.error) {
+            if (dton_responce.data.account_states.length === 0) {
+              i = 12
+            }
+            dataToSet.push(...dton_responce.data.account_states)
+            const maped = new Set(dataToSet.map((e: any) => e.nft_address))
+            setData({ ln: dataToSet.filter((item: any, index: any) => maped.has(item.nft_address)).length, account_states: dataToSet.filter((item: any, index: any) => maped.has(item.nft_address)) })
+          } else {
+            setError(dton_responce.error.message)
+          }
+          i++
+        }
+        setLoading(false)
+      })()
+
+    }
+    fn()
+    setInterval(() => {
+      fn()
+    }, 60000);
+
+
+  }, [])
+
+  useEffect(() => {
+    if (data.account_states) {
+      console.log(data.ln)
       let i = 0
       const newCells = [...cells];
-      while (i < data.account_states.length) {
-        const state = Cell.fromBase64(data.account_states[i].account_state_state_init_data.toString('base64')).beginParse()
+      const dt = [...data.account_states]
+      let j = 0
+      const ids = []
+      while (i < data.ln) {
+        const state = Cell.fromBase64(dt[i].account_state_state_init_data.toString('base64')).beginParse()
         const index = state.loadUint(64)
         const coll_add = state.loadMaybeAddress()
         const owner = state.loadMaybeAddress()
@@ -129,9 +184,10 @@ const Cells = () => {
           const metadata = (state.loadRef().asSlice().skip(8).loadDict(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell()))
           const editor = state.loadMaybeAddress()
           const byteCharacters = ((flattenSnakeCell(metadata.get(bufferToBigInt(sha256_sync('image_data'))) || new Cell()).toString('base64')));
+          ids.push(dt[i].nft_address)
           newCells[index] = {
             id: index, state: {
-              nft_address: `${data.account_states[i].nft_workchain}:${data.account_states[i].nft_address}`,
+              nft_address: `${dt[i].nft_workchain}:${dt[i].nft_address}`,
               coll_add: coll_add?.toString(),
               owner: owner,
               editor: editor,
@@ -140,12 +196,16 @@ const Cells = () => {
               description: flattenSnakeCell(metadata.get(bufferToBigInt(sha256_sync('description'))) || new Cell()).toString('utf-8')
             }
           }
+          j++
         }
         i++;
       }
+      console.log(new Set(ids).size)
+      const maped = new Set(newCells.map((e: any) => e.state ? e.state.nft_address : ''))
+      console.log({ ln: newCells.filter((item: any, index: any) => item.state ? maped.has(item.state.nft_address) : false).length })
       setCells(newCells)
     }
-  }, [data]);
+  }, [data.ln]);
 
   useEffect(() => {
     setEditing(false)
@@ -260,7 +320,7 @@ const Cells = () => {
       buy this nfts only if you want to have fun and try this technology!
       <br />
       {loading ? <p>loading onchain data...</p> : ''}
-      {error ? <p>Error : {error.message}</p> : ''}
+      {error ? <p>Error : {error}</p> : ''}
       {userFriendlyAddress ? <p>ur balance: {(balance / 1000000000).toFixed(3)}ton</p> : ""}
       {selectedId.id || selectedId.id === 0 ? <p>{`selected nft id: ${selectedId.id}`}</p> : <p>no selected nft</p>}
       {selectedId.id || selectedId.id === 0 ? <p><button onClick={() => setSelectedId({})}>{`unselect X`}</button></p> : ''}
