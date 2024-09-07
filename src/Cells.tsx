@@ -128,7 +128,7 @@ const Cells = () => {
         while (i < 12) {
           const GET_STATES_a = gql`
   query GetAccountStates {
-   account_states(
+   raw_account_states(
     order_by: "lt"
    page_size: 150
    page: ${i}
@@ -144,10 +144,10 @@ const Cells = () => {
             query: GET_STATES_a,
           })
           if (!dton_responce.error) {
-            if (dton_responce.data.account_states.length === 0) {
+            if (dton_responce.data.raw_account_states.length === 0) {
               i = 12
             }
-            dataToSet.push(...dton_responce.data.account_states)
+            dataToSet.push(...dton_responce.data.raw_account_states)
             const maped = new Set(dataToSet.map((e: any) => e.nft_address))
             setData({ ln: dataToSet.filter((item: any, index: any) => maped.has(item.nft_address)).length, account_states: dataToSet.filter((item: any, index: any) => maped.has(item.nft_address)) })
           } else {
@@ -321,7 +321,7 @@ const Cells = () => {
       <br />
       {loading ? <p>loading onchain data...</p> : ''}
       {error ? <p>Error : {error}</p> : ''}
-      {userFriendlyAddress ? <p>ur balance: {(balance / 1000000000).toFixed(3)}ton</p> : ""}
+      {userFriendlyAddress ? <p>balance: {(balance / 1000000000).toFixed(3)}ton</p> : ""}
       {selectedId.id || selectedId.id === 0 ? <p>{`selected nft id: ${selectedId.id}`}</p> : <p>no selected nft</p>}
       {selectedId.id || selectedId.id === 0 ? <p><button onClick={() => setSelectedId({})}>{`unselect X`}</button></p> : ''}
       {(selectedId.id || selectedId.id === 0) && !selectedId.state && userFriendlyAddress ? <p><button className='mint' onClick={() => mintNft()}>{`mint this nft!`}</button><i className='mint_text'>you will pay 2.2TONs / 2ton as tip to creator + ~0.2ton for fess </i></p> : ''}
@@ -329,8 +329,8 @@ const Cells = () => {
       {selectedId.state ? <p>nft address: <span className='addr' onClick={() => navigator.clipboard.writeText(Address.parse(selectedId.state.nft_address).toString())}>{Address.parse(selectedId.state.nft_address).toString().slice(0, 5)}...{Address.parse(selectedId.state.nft_address).toString().slice(-5)}</span> <i className='addr_text'>click to copy</i></p> : ''}
       {selectedId.state ? <p>name: {selectedId.state.name}</p> : ''}
       {selectedId.state ? <p>description: {selectedId.state.description}</p> : ''}
-      {selectedId.state && !userFriendlyAddress ? <p>connect ur wallet to edit nfts!!!!</p> : ''}
-      {selectedId.state && userFriendlyAddress && !Address.parseFriendly(userFriendlyAddress).address.equals(selectedId.state.editor) ? <p>u r not an editor of this nft</p> : ''}
+      {selectedId.state && !userFriendlyAddress ? <p>connect your wallet to edit nfts!!!!</p> : ''}
+      {selectedId.state && userFriendlyAddress && !Address.parseFriendly(userFriendlyAddress).address.equals(selectedId.state.editor) ? <p>you are not an editor of this nft</p> : ''}
       {selectedId.state && userFriendlyAddress && Address.parseFriendly(userFriendlyAddress).address.equals(selectedId.state.editor) ? <p><button onClick={() => { setEditing(!editing) }}>{editing ? 'cancel update X' : 'edit this nft'}</button> </p> : ''}
       {editing ? <div>
         <input placeholder='name' onChange={(e: any) => setName(e.target.value)} value={name} />
