@@ -373,6 +373,14 @@ const Cells = () => {
         )) : 'no cells :('}
         <br />
       </div>
+      <br/>
+      old <a href={"https://toncells.org"}>toncells landing</a>
+      <br/>
+      old <a href={"https://app.toncells.org"}>toncells app</a>
+      <br/>
+      telegram <a href={"https://toncells.t.me"}>channel</a>
+      <br/>
+      opensorsed on <a href={"https://github.com/orgs/Toncells/repositories"}>github</a>
     </div >
   )
 }
