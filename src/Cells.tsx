@@ -125,12 +125,12 @@ const Cells = () => {
       let dataToSet = [] as any;
       (async () => {
         setLoading(true)
-        while (i < 12) {
+        while (i < 36) {
           const GET_STATES_a = gql`
   query GetAccountStates {
    raw_account_states(
     order_by: "lt"
-   page_size: 150
+   page_size: 50
    page: ${i}
    parsed_nft_collection_address_address: "18F87489B117D7A4501225F7364200D800EA1481CECD8C841213E6BAD37A9EE1"
   ) {
@@ -145,7 +145,7 @@ const Cells = () => {
           })
           if (!dton_responce.error) {
             if (dton_responce.data.raw_account_states.length === 0) {
-              i = 12
+              i = 36
             }
             dataToSet.push(...dton_responce.data.raw_account_states)
             const maped = new Set(dataToSet.map((e: any) => e.nft_address))
