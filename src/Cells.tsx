@@ -320,7 +320,7 @@ const Cells = () => {
       buy this nfts only if you want to have fun and try this technology!
       <br />
       {loading ? <p>loading onchain data...</p> : ''}
-      {error ? <p>Error : {error}</p> : ''}
+      {error ? <p>Error : {error} / reload the page</p> : ''}
       {userFriendlyAddress ? <p>balance: {(balance / 1000000000).toFixed(3)}ton</p> : ""}
       {selectedId.id || selectedId.id === 0 ? <p>{`selected nft id: ${selectedId.id}`}</p> : <p>no selected nft</p>}
       {selectedId.id || selectedId.id === 0 ? <p><button onClick={() => setSelectedId({})}>{`unselect X`}</button></p> : ''}
