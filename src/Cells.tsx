@@ -315,6 +315,8 @@ const Cells = () => {
   return (
     <div className="logic">
       <br />
+      toncells v2
+      <br />
       DONT BUY THIS NFT IF YOU WANT TO FLIP IT
       <br />
       buy this nfts only if you want to have fun and try this technology!
@@ -376,7 +378,7 @@ const Cells = () => {
       <br/>
       old <a href={"https://toncells.org"}>toncells landing</a>
       <br/>
-      old <a href={"https://app.toncells.org"}>toncells app</a>
+      old <a href={"https://old.toncells.org"}>toncells old app</a>
       <br/>
       telegram <a href={"https://toncells.t.me"}>channel</a>
       <br/>
