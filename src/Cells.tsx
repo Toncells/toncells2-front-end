@@ -376,9 +376,9 @@ const Cells = () => {
         <br />
       </div>
       <br/>
-      old <a href={"https://toncells.org"}>toncells landing</a>
+      toncells <a href={"https://toncells.org"}>landing page</a>
       <br/>
-      old <a href={"https://old.toncells.org"}>toncells old app</a>
+      toncells v1 <a href={"https://old.toncells.org"}>old app</a>
       <br/>
       telegram <a href={"https://toncells.t.me"}>channel</a>
       <br/>
