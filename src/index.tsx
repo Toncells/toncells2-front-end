@@ -20,7 +20,7 @@ const client = new ApolloClient({
 root.render(
   <React.StrictMode>
     <ApolloProvider client={client}>
-      <TonConnectUIProvider manifestUrl="https://2.toncells.org/tonconnect-manifest.json">
+      <TonConnectUIProvider manifestUrl="https://app.toncells.org/tonconnect-manifest.json">
         <App />
       </TonConnectUIProvider>
     </ApolloProvider>
