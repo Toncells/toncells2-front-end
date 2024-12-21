@@ -262,7 +262,7 @@ const Cells = () => {
         modals: 'all',
         skipRedirectToWallet: 'ios',
         notifications: [],
-        returnStrategy: 'https://2.toncells.org/'
+        returnStrategy: 'https://app.toncells.org/'
       })
     } catch (e) {
       console.log(e)
@@ -305,7 +305,7 @@ const Cells = () => {
         modals: 'all',
         skipRedirectToWallet: 'ios',
         notifications: [],
-        returnStrategy: 'https://2.toncells.org/'
+        returnStrategy: 'https://app.toncells.org/'
       })
     } catch (e) {
       console.log(e)
