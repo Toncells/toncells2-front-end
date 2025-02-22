@@ -12,13 +12,13 @@ html {
   } 
 .app {
   position: relative;
-  width: 100vw;
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100vw;
 }
-.body {
-
+body {
+margin: 0 !important;
 }
 .logic {
   text-align: center;
