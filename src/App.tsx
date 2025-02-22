@@ -6,9 +6,7 @@ const App = () => {
 
   return (
     <div className="app">
-      <div className="header">
-        <TonConnectButton />
-      </div>
+      <TonConnectButton />
       <div className="body">
         <Cells />
       </div>

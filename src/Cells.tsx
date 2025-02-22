@@ -151,7 +151,17 @@ const Cells = () => {
             const maped = new Set(dataToSet.map((e: any) => e.nft_address))
             setData({ ln: dataToSet.filter((item: any, index: any) => maped.has(item.nft_address)).length, account_states: dataToSet.filter((item: any, index: any) => maped.has(item.nft_address)) })
           } else {
-            setError(dton_responce.error.message)
+            //@ts-ignore
+            if (dton_responce.errors) {
+              //@ts-ignore
+              if (dton_responce.errors[0].toLowerCase().includes('ratelimit')) {
+                setError(`You have exceeded the request rate limit for the dTON API`)
+              } else {
+                setError(`dTON ${dton_responce.error.message.toLowerCase()}`)
+              }
+            } else {
+              setError(`dTON ${dton_responce.error.message.toLowerCase()}`)
+            }
           }
           i++
         }
@@ -322,7 +332,7 @@ const Cells = () => {
       buy this nfts only if you want to have fun and try this technology!
       <br />
       {loading ? <p>loading onchain data...</p> : ''}
-      {error ? <p>Error : {error} / reload the page</p> : ''}
+      {error ? <p>!Error : {error} / wait a min and reload the page</p> : ''}
       {userFriendlyAddress ? <p>balance: {(balance / 1000000000).toFixed(3)}ton</p> : ""}
       {selectedId.id || selectedId.id === 0 ? <p>{`selected nft id: ${selectedId.id}`}</p> : <p>no selected nft</p>}
       {selectedId.id || selectedId.id === 0 ? <p><button onClick={() => setSelectedId({})}>{`unselect X`}</button></p> : ''}
@@ -375,13 +385,13 @@ const Cells = () => {
         )) : 'no cells :('}
         <br />
       </div>
-      <br/>
+      <br />
       toncells <a href={"https://toncells.org"}>landing page</a>
-      <br/>
+      <br />
       toncells v1 <a href={"https://old.toncells.org"}>old app</a>
-      <br/>
+      <br />
       telegram <a href={"https://toncells.t.me"}>channel</a>
-      <br/>
+      <br />
       opensorsed on <a href={"https://github.com/orgs/Toncells/repositories"}>github</a>
     </div >
   )
