@@ -17,6 +17,8 @@ const GET_STATES = gql`
   }
 `;
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export function bufferToBigInt(buffer: any) {
   let hex = buffer.toString('hex');
   let bigInt = BigInt('0x' + hex);
@@ -125,12 +127,12 @@ const Cells = () => {
       let dataToSet = [] as any;
       (async () => {
         setLoading(true)
-        while (i < 36) {
+        while (i <= 16) {
           const GET_STATES_a = gql`
   query GetAccountStates {
    raw_account_states(
-    order_by: "lt"
-   page_size: 50
+   order_by: "lt"
+   page_size: 100
    page: ${i}
    parsed_nft_collection_address_address: "18F87489B117D7A4501225F7364200D800EA1481CECD8C841213E6BAD37A9EE1"
   ) {
@@ -143,28 +145,21 @@ const Cells = () => {
           const dton_responce = await getNfts({
             query: GET_STATES_a,
           })
+          console.log(dton_responce)
           if (!dton_responce.error) {
             if (dton_responce.data.raw_account_states.length === 0) {
-              i = 36
+              i = 17
             }
             dataToSet.push(...dton_responce.data.raw_account_states)
             const maped = new Set(dataToSet.map((e: any) => e.nft_address))
             setData({ ln: dataToSet.filter((item: any, index: any) => maped.has(item.nft_address)).length, account_states: dataToSet.filter((item: any, index: any) => maped.has(item.nft_address)) })
+            i++;
+            setError("");
           } else {
-            //@ts-ignore
-            if (dton_responce.errors) {
-              //@ts-ignore
-              if (dton_responce.errors[0].toLowerCase().includes('ratelimit')) {
-                setError(`You have exceeded the request rate limit for the dTON API`)
-              } else {
-                setError(`dTON ${dton_responce.error.message.toLowerCase()}`)
-              }
-            } else {
-              setError(`dTON ${dton_responce.error.message.toLowerCase()}`)
-            }
+            setError(`Error with dTON API on page #${i} / if nothing happens wait a min and reload the page`)
           }
-          i++
         }
+        await sleep(1000)
         setLoading(false)
       })()
 
@@ -172,7 +167,7 @@ const Cells = () => {
     fn()
     setInterval(() => {
       fn()
-    }, 60000);
+    }, 180000);
 
 
   }, [])
@@ -327,12 +322,14 @@ const Cells = () => {
       <br />
       toncells v2
       <br />
-      DONT BUY THIS NFT IF YOU WANT TO FLIP IT
+      THESE NFTs ARE SBTs 
       <br />
-      buy this nfts only if you want to have fun and try this technology!
+      meaning you cant sell or transfer them.
       <br />
-      {loading ? <p>loading onchain data...</p> : ''}
-      {error ? <p>!Error : {error} / wait a min and reload the page</p> : ''}
+      buy this nfts only if you want to try this technology & store your data onchain forever!
+      <br />
+      {loading ? <p>loading onchain data from dTON...</p> : ''}
+      {error ? <p>!{error}</p> : ''}
       {userFriendlyAddress ? <p>balance: {(balance / 1000000000).toFixed(3)}ton</p> : ""}
       {selectedId.id || selectedId.id === 0 ? <p>{`selected nft id: ${selectedId.id}`}</p> : <p>no selected nft</p>}
       {selectedId.id || selectedId.id === 0 ? <p><button onClick={() => setSelectedId({})}>{`unselect X`}</button></p> : ''}
