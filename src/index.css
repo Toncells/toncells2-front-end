@@ -62,7 +62,7 @@ body {
     button {
     border-radius: 0;
       background-color: #000;
-      border: 0.5px dashed #fff;
+      border: 1px dashed #fff;
       width: 100%; /* Full width of the button container */
       padding: 10px; /* Add padding for better appearance */
     }
