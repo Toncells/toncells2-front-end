@@ -127,12 +127,12 @@ const Cells = () => {
       let dataToSet = [] as any;
       (async () => {
         setLoading(true)
-        while (i <= 16) {
+        while (i <= 40) {
           const GET_STATES_a = gql`
   query GetAccountStates {
    raw_account_states(
    order_by: "lt"
-   page_size: 100
+   page_size: 50
    page: ${i}
    parsed_nft_collection_address_address: "18F87489B117D7A4501225F7364200D800EA1481CECD8C841213E6BAD37A9EE1"
   ) {
@@ -148,7 +148,7 @@ const Cells = () => {
           console.log(dton_responce)
           if (!dton_responce.error) {
             if (dton_responce.data.raw_account_states.length === 0) {
-              i = 17
+              i = 41
             }
             dataToSet.push(...dton_responce.data.raw_account_states)
             const maped = new Set(dataToSet.map((e: any) => e.nft_address))
@@ -159,7 +159,7 @@ const Cells = () => {
             setError(`Error with dTON API on page #${i} / if nothing happens wait a min and reload the page`)
           }
         }
-        await sleep(1000)
+        await sleep(500)
         setLoading(false)
       })()
 
