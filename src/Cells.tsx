@@ -2,22 +2,71 @@ import { useState, useEffect } from 'react';
 import { getHttpEndpoint } from "@orbs-network/ton-access";
 import { beginCell, BitBuilder, Cell, TonClient, Dictionary, Address } from "ton";
 import { sha256_sync } from 'ton-crypto'
-import { useLazyQuery, gql } from '@apollo/client';
 import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
-import { loadavg } from 'os';
 const nft_coll_address = "EQAY-HSJsRfXpFASJfc2QgDYAOoUgc7NjIQSE-a603qe4efO"
+const TONCENTER = "https://toncenter.com/api/v3"
+const TONCENTER_API_KEY = "" // optional: put a free key from https://toncenter.com to raise 1 -> 10 rps
+// slow-but-stable loading tuning (free tier is ~1 rps, bursts get 429)
+const BATCH_SIZE = 10          // NFTs per accountStates request
+const BATCH_DELAY = 1500       // pause between batches (ms)
+const REQUEST_TIMEOUT = 20000  // per-request timeout (ms)
+const MAX_RETRIES = 8          // retries per request before giving up
+const ERROR_RETRY_DELAY = 30000 // full-load retry delay after a hard failure (ms)
 const coverImg = "UklGRkYEAABXRUJQVlA4IDoEAAAQFQCdASpAAEAAPp1CmUq0My2rKhmcWLATiWkAE9B/b+ix8+P4PE19m/y/CDtWboRjnvItQLul6I/204waO71Wv6P9m/O59M/sT8A360f8fsQei02Cxol2bjbM2/x0d4+i27xcE/79VPMDoJLo0iCobsRjdsLhuiElwO/puar0C1135HBXzVcrh3vt18ffR0WTmkKHAn444fjTdvDzQQihhHLJJqRagsoEW+0O287h0AAA/vvQGycTEvTJP39yj9nu/wCTQBJF/ehnz7/mNXMU0DRwCJ3UtqvhqIzFj8B3n+CLx9xytEPmu4zrU5cQ3/5im2PX1dEwTQMrpDMPqvkPW/biBfDc+2eufkGmOCjkTJquXNPbk/MjkLxD0RieoWmbPEPjYH54fCrsdyBylr1qR2Mm0sH+azNkAmv4YzhitAplQg3PJ2ZuglT//8+y8vpxhsPwLKOtgkHkD5d/B4Y4dJvCwQyO9uIGTU7IgaV1NzeQZGme5+QD3puTL5f8PMIqV+1NGAKn9FteVF8s6iclgibOpzqCKGfUBr3DvplkCG3wmza7BoPWJrnuKLDfD+Eu3cQZ6jojHRFVH41eHx6G9EcigV/Pv7pGValQQmwJy/mGze7Cavg3hR+OP1BCvrsygNVkdaRYqJtCwhn6wn7oCUxjGzOuR65ZSiwCwcZ6fvjc7KAb/fMk9BcQNyBGwIw3vZkck70KLJeG2fg1egR+LISuUjzoHv9AwgTchYEKWJlfG0Lhv/jfz7dlwaa6BKA/6+Zs+p1pGU4IT8FkqC/zo6gENiOiYmnipvGkceyymKX1SF1jmcKXg+d0doCeN82lP1uuvYiAYXb5nXF1/PoyQ1BPbiRNlLFuZzxIozvVoeTrm+jDdOeBJBJF5tcYCtTAYHjFkAKBRnNWksErzdo63vsjcm+Zl7GRdv+MMvMD9PNLAio78JjGKxs4yOJcQ6ICCeuwB/lMy8k7jjyh+vUH6hfrLAkNxqfjw1I2Pxaxrjz3hktEDzVeGDE/ecVhE3iRqGPitYF5aC+c9+F/vGFYJlAjBV/i2IdLRJ6Ag5GQVEkzvDZyzv4WrD8nzL2PV12g/jh0KGJPgo3+gnR9tZRmLDYAhCCWWcNZ1U65QTTxcL1fFUa0bSEW6y1mxMfyG2ZdIEjPq3mD1MzOcvgdv4esM5/wwr/v53WyXeokaWnSu5zXsAdM5JRkun8/6KBp3BH/YvJdpRtJ70VoXz0O7PPL18sF5UiMzLzEso3+xE/RuNv9TfJyx0ntwO5RDRVBJwMA8AzOvDWLvcS0pHD+PApSr8uR/WJ5TNX7mFd0U6ZFis8opoPwlH0oWaZpYlX7tsja93R1Hvwlc7ArPCoHvfX8zW1RDYcPzhypSCwu7UaG0URtfCgXh71NLPPRSqarG8+nX47DOmqIQoyCr+D9t633LWb3+7nNb+gAAA=="
-const GET_STATES = gql`
-  query GetAccountStates {
-   account_states(
-   parsed_nft_collection_address_address: "18F87489B117D7A4501225F7364200D800EA1481CECD8C841213E6BAD37A9EE1"
-  ) {
-    nft_workchain: workchain
-  }
-  }
-`;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// GET json with per-request timeout + retry/backoff. Retries on network errors,
+// timeouts, 429 (rate limit) and 5xx, honoring the Retry-After header when present.
+const fetchJson = async (url: string, onRetry?: (attempt: number, waitMs: number, reason: string) => void) => {
+  const headers: Record<string, string> = TONCENTER_API_KEY ? { 'X-API-Key': TONCENTER_API_KEY } : {};
+  for (let attempt = 0; ; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT);
+    let reason = '';
+    try {
+      const res = await fetch(url, { headers, signal: ctrl.signal });
+      clearTimeout(timer);
+      if (res.ok) return await res.json();
+      // retryable server-side conditions
+      if (res.status === 429 || res.status >= 500) {
+        const ra = Number(res.headers.get('retry-after'));
+        reason = `HTTP ${res.status}`;
+        if (attempt >= MAX_RETRIES) throw new Error(reason);
+        const wait = ra > 0 ? ra * 1000 : Math.min(1000 * 2 ** attempt, 15000);
+        onRetry?.(attempt + 1, wait, reason);
+        await sleep(wait);
+        continue;
+      }
+      throw new Error(`HTTP ${res.status}`); // non-retryable (4xx)
+    } catch (e: any) {
+      clearTimeout(timer);
+      reason = e?.name === 'AbortError' ? 'timeout' : (e?.message || 'network error');
+      // non-retryable HTTP errors already thrown above re-throw here on last check
+      if (reason.startsWith('HTTP 4') || attempt >= MAX_RETRIES) throw new Error(reason);
+      const wait = Math.min(1000 * 2 ** attempt, 15000);
+      onRetry?.(attempt + 1, wait, reason);
+      await sleep(wait);
+    }
+  }
+};
+
+// Fetch every NFT item of the collection (paginated) -> returns raw addresses "wc:HEX"
+const fetchAllNftItems = async (onRetry?: any) => {
+  const items: any[] = [];
+  let offset = 0;
+  const limit = 200;
+  while (true) {
+    const url = `${TONCENTER}/nft/items?collection_address=${nft_coll_address}&limit=${limit}&offset=${offset}`;
+    const json = await fetchJson(url, onRetry);
+    const batch = json.nft_items || [];
+    items.push(...batch);
+    if (batch.length < limit) break;
+    offset += limit;
+    await sleep(BATCH_DELAY);
+  }
+  return items;
+};
 
 export function bufferToBigInt(buffer: any) {
   let hex = buffer.toString('hex');
@@ -103,12 +152,12 @@ const Cells = () => {
   const [img, setImg] = useState(null as any);
   const [img_old, setImgOld] = useState(null as any);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
   const [data, setData] = useState({ ln: 0 } as any);
 
   const [tonConnectUI] = useTonConnectUI();
   const userFriendlyAddress = useTonAddress();
-  const [getNfts, dton_responce_old] = useLazyQuery(GET_STATES);
 
   useEffect(() => {
     if (!cells[0]) {
@@ -121,55 +170,61 @@ const Cells = () => {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    let refreshTimer: any;
+    let retryTimer: any;
 
-    const fn = () => {
-      let i = 0;
-      let dataToSet = [] as any;
-      (async () => {
-        setLoading(true)
-        while (i <= 40) {
-          const GET_STATES_a = gql`
-  query GetAccountStates {
-   raw_account_states(
-   order_by: "lt"
-   page_size: 50
-   page: ${i}
-   parsed_nft_collection_address_address: "18F87489B117D7A4501225F7364200D800EA1481CECD8C841213E6BAD37A9EE1"
-  ) {
-    nft_address: address
-    nft_workchain: workchain
-    account_state_state_init_data
-  }
-  }
-`;
-          const dton_responce = await getNfts({
-            query: GET_STATES_a,
-          })
-          console.log(dton_responce)
-          if (!dton_responce.error) {
-            if (dton_responce.data.raw_account_states.length === 0) {
-              i = 41
-            }
-            dataToSet.push(...dton_responce.data.raw_account_states)
-            const maped = new Set(dataToSet.map((e: any) => e.nft_address))
-            setData({ ln: dataToSet.filter((item: any, index: any) => maped.has(item.nft_address)).length, account_states: dataToSet.filter((item: any, index: any) => maped.has(item.nft_address)) })
-            i++;
-            setError("");
-          } else {
-            setError(`Error with dTON API on page #${i} / if nothing happens wait a min and reload the page`)
+    // Load the whole collection slowly and progressively: cells appear batch by
+    // batch, every request retries on 429/timeout, and a hard failure schedules
+    // a full retry so it heals itself without a manual reload.
+    const load = async () => {
+      if (cancelled) return;
+      setLoading(true);
+      setError('');
+      const onRetry = (attempt: number, waitMs: number, reason: string) =>
+        setProgress(`rate-limited (${reason}), retrying in ${Math.round(waitMs / 1000)}s (try ${attempt})...`);
+      try {
+        setProgress('fetching nft list...');
+        const items = await fetchAllNftItems(onRetry);
+        const acc: any[] = [];
+        for (let i = 0; i < items.length; i += BATCH_SIZE) {
+          if (cancelled) return;
+          const slice = items.slice(i, i + BATCH_SIZE);
+          const qs = slice.map((it: any) => `address=${encodeURIComponent(it.address)}`).join('&');
+          const json = await fetchJson(`${TONCENTER}/accountStates?${qs}&include_boc=true`, onRetry);
+          const map: Record<string, string> = {};
+          for (const a of json.accounts || []) if (a.data_boc) map[a.address.toUpperCase()] = a.data_boc;
+          for (const it of slice) {
+            const boc = map[it.address.toUpperCase()];
+            if (!boc) continue;
+            const [wc, hex] = it.address.split(':');
+            acc.push({ nft_workchain: Number(wc), nft_address: hex.toUpperCase(), account_state_state_init_data: boc });
           }
+          if (cancelled) return;
+          setData({ ln: acc.length, account_states: [...acc] }); // progressive render
+          setProgress(`loaded ${acc.length}/${items.length} nfts...`);
+          setError('');
+          if (i + BATCH_SIZE < items.length) await sleep(BATCH_DELAY);
         }
-        await sleep(500)
-        setLoading(false)
-      })()
+        setProgress('');
+        setLoading(false);
+        refreshTimer = setTimeout(load, 180000); // periodic refresh
+      } catch (e: any) {
+        if (cancelled) return;
+        console.log(e);
+        setLoading(false);
+        setProgress('');
+        setError(`Error with TON API: ${e.message} / retrying automatically in ${Math.round(ERROR_RETRY_DELAY / 1000)}s...`);
+        retryTimer = setTimeout(load, ERROR_RETRY_DELAY); // self-heal
+      }
+    };
 
-    }
-    fn()
-    setInterval(() => {
-      fn()
-    }, 180000);
-
-
+    load();
+    return () => {
+      cancelled = true;
+      clearTimeout(refreshTimer);
+      clearTimeout(retryTimer);
+    };
   }, [])
 
   useEffect(() => {
@@ -328,7 +383,7 @@ const Cells = () => {
       <br />
       buy this nfts only if you want to try this technology & store your data onchain forever!
       <br />
-      {loading ? <p>loading onchain data from dTON...</p> : ''}
+      {loading ? <p>loading onchain data from TON API... {progress}</p> : ''}
       {error ? <p>!{error}</p> : ''}
       {userFriendlyAddress ? <p>balance: {(balance / 1000000000).toFixed(3)}ton</p> : ""}
       {selectedId.id || selectedId.id === 0 ? <p>{`selected nft id: ${selectedId.id}`}</p> : <p>no selected nft</p>}
