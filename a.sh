@@ -13,10 +13,10 @@ fi
 # Step 1: Add Dockerfile content to ./Dockerfile
 DOCKERFILE_CONTENT="FROM node:18-alpine AS build
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
 COPY . .
-RUN npm run build
+RUN yarn build
 
 FROM nginx:alpine
 WORKDIR /usr/share/nginx/html
